@@ -1,0 +1,27 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{secrets.PRIVATE_KEY}}
+      
+      - name: Disable Host key verification
+        # Hack to prevent "Host key verification failed". Should be replaced with a ssh-keyscan based solution
+        run: echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Build and Deploy
+        env:
+          DOCKER_REMOTE_HOST: "ssh://${{secrets.USER}}@${{secrets.HOST}}:${{secrets.PORT}}"
+        run: |
+         chmod +x ./deploy.sh
+         ./deploy.sh
+        shell: bash

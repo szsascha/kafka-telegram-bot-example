@@ -1,0 +1,95 @@
+version: '2'
+services:
+  zookeeper:
+    build:
+      context: .
+      dockerfile: ./images/zookeeper.Dockerfile
+    container_name: kafka-telegram-bot-example-zookeeper-1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+  
+  kafka:
+    build:
+      context: .
+      dockerfile: ./images/kafka.Dockerfile
+    container_name: kafka-telegram-bot-example-kafka-1
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+    expose:
+      - 29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-telegram-bot-example-kafka-1:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  init-kafka:
+    build:
+      context: .
+      dockerfile: ./images/kafka.Dockerfile
+    container_name: kafka-telegram-bot-example-init-kafka-1
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka-telegram-bot-example-kafka-1:29092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka-telegram-bot-example-kafka-1:29092 --create --if-not-exists --replication-factor 1 --partitions 2 --topic incoming_messages
+      kafka-topics --bootstrap-server kafka-telegram-bot-example-kafka-1:29092 --create --if-not-exists --replication-factor 1 --partitions 2 --topic outgoing_messages
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka-telegram-bot-example-kafka-1:29092 --list
+      "
+
+  telegram-callback:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./images/app.Dockerfile
+      target: telegram-callback
+    container_name: kafka-telegram-bot-example-telegram-callback-1
+    depends_on:
+      init-kafka:
+        condition: "service_completed_successfully"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVER=kafka-telegram-bot-example-kafka-1:29092
+    ports:
+      - 8080:80
+
+  telegram-message-processor:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./images/app.Dockerfile
+      target: telegram-message-processor
+    container_name: kafka-telegram-bot-example-telegram-message-processor-1
+    depends_on:
+      init-kafka:
+        condition: "service_completed_successfully"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVER=kafka-telegram-bot-example-kafka-1:29092
+      - KAFKA_GROUP_ID_TELEGRAM_MESSAGE_PROCESSOR=telegram-message-processor
+
+  telegram-sender:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./images/app.Dockerfile
+      target: telegram-sender
+    container_name: kafka-telegram-bot-example-telegram-sender-1
+    depends_on:
+      init-kafka:
+        condition: "service_completed_successfully"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVER=kafka-telegram-bot-example-kafka-1:29092
+      - KAFKA_GROUP_ID_TELEGRAM_SENDER=telegram-sender
