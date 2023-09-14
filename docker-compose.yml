@@ -63,7 +63,7 @@ services:
         condition: "service_completed_successfully"
     environment:
       - KAFKA_BOOTSTRAP_SERVER=kafka-telegram-bot-example-kafka-1:29092
-      - TELEGRAM_BOT_API_KEY=${TELEGRAM_BOT_API_KEY}
+      - TELEGRAM_BOT_API_KEY=${TELEGRAM_BOT_API_KEY:?err}
     ports:
       - 8080:80
 
@@ -94,4 +94,4 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVER=kafka-telegram-bot-example-kafka-1:29092
       - KAFKA_GROUP_ID_TELEGRAM_SENDER=telegram-sender
-      - TELEGRAM_BOT_API_KEY=${TELEGRAM_BOT_API_KEY}
+      - TELEGRAM_BOT_API_KEY=${TELEGRAM_BOT_API_KEY:?err}
