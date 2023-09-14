@@ -21,6 +21,7 @@ jobs:
       - name: Build and Deploy
         env:
           DOCKER_REMOTE_HOST: "ssh://${{secrets.USER}}@${{secrets.HOST}}:${{secrets.PORT}}"
+          TELEGRAM_BOT_API_KEY: "${{secrets.TELEGRAM_BOT_API_KEY}}"
         run: |
          chmod +x ./deploy.sh
          ./deploy.sh
