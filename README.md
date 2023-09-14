@@ -8,6 +8,7 @@ The echo bot consists of 3 services:
 - telegram-sender: Receives the outgoing_messages topic and creates the Telegram message
 
 ## Futher notes
+- The production environment uses a proxy like https://github.com/szsascha/caddy-proxy (HTTPS handling is done in the proxy)
 - Run a service directly via `go run telegram-callback/telgram-callback.go`
 - Set Telegram webhook via POST https://api.telegram.org/bot{{token}}/setWebhook?url=https://{{serveraddress}}/{{token}}
 - The current setup is created for use in github actions only
